@@ -16,6 +16,10 @@ private var samples : float[];
 
 private var position = 0;
 private var interval = 0;
+//if the granule is longer than the audiobuffer,
+//we will need that next buffer continues from the last
+//buffering position of the sample + 1
+private var bufferPan = 0;
 
 function Awake() {
 	sampleLength = clip.samples;
@@ -56,26 +60,43 @@ function OnGUI() {
 	//if (playbackSpeed == 0) playbackSpeed = 1;
 	grainSize = Mathf.RoundToInt((guiGrainSize/100000.00)*(Mathf.Floor(sampleLength/2)*2));
 	grainStep = Mathf.RoundToInt(guiGrainStep);
-	position = 	Mathf.RoundToInt((guiGrainPosition/100000.00)*(Mathf.Floor(sampleLength/2)*2));
+	position = 	Mathf.RoundToInt((guiGrainPosition/100000.00)*(Mathf.Floor(sampleLength/2)));
 }
 
 function OnAudioFilterRead(data : float[], channels : int) {
     for (var i = 0; i < data.Length; i += 2) {
-        data[i] = samples[position * 2];
-        data[i + 1] = samples[position * 2 + 1];
-        
+    	
+    	data[i] = samples[(position * 2)%sampleLength];
+    	data[i + 1] = samples[(position * 2 + 1)%sampleLength];
+
+
+
+    	//search next same voltage sample
+    	var nextSameLevelSample=grainSize;
+    	while(samples[(nextSameLevelSample * 2)%sampleLength ]!=samples[(nextSameLevelSample * 2)%position]){
+    		nextSameLevelSample++;
+    	}
+
         if (--interval <= 0) {
-	        interval = grainSize;
+        	interval=nextSameLevelSample;
+	        //interval = grainSize;
 	        //position += grainStep;
         } else {
         	position += playbackSpeed;
         }
         //clamp variables
-        if (position >= sampleLength) {
-        	position = sampleLength/2 - 1;
+        if (position >= sampleLength/2) {
+        	position = sampleLength/2 - 2;
         }
         if (position < 0) {
         	position = 0;
         }
+
+        /*for (var cn = 0; i < channels; cn ++) {
+        	//data[i] = Mathf.Sin(position/700);
+	        data[i] = samples[position * channels + cn];
+	        //data[i + 1] = samples[position * 2 + 1];
+	    }*/
+	    
     }
 }
