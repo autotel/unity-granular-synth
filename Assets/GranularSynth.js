@@ -46,7 +46,7 @@ function OnGUI() {
 	guiGrainStep = GUILayout.HorizontalSlider(guiGrainStep, -3000.0, 3000.0);
 	GUILayout.FlexibleSpace();
 	GUILayout.Label("Grain position: " + position);
-	guiGrainPosition = GUILayout.HorizontalSlider(guiGrainPosition, 0, 100000);
+	guiGrainPosition = GUILayout.HorizontalSlider(guiGrainPosition, 1, 100000);
 	GUILayout.FlexibleSpace();
 	if (GUILayout.Button("RANDOMIZE!")) {
 		guiPlaybackSpeed = Random.Range(-2.0, 2.0);
@@ -65,20 +65,23 @@ function OnGUI() {
 
 function OnAudioFilterRead(data : float[], channels : int) {
     for (var i = 0; i < data.Length; i += 2) {
-    	
+
+
     	data[i] = samples[(position * 2)%sampleLength];
     	data[i + 1] = samples[(position * 2 + 1)%sampleLength];
 
-
-
-    	//search next same voltage sample
-    	var nextSameLevelSample=grainSize;
-    	while(samples[(nextSameLevelSample * 2)%sampleLength ]!=samples[(nextSameLevelSample * 2)%position]){
-    		nextSameLevelSample++;
+    	//list next same-voltage samples within 2048
+    	var nextSameLevelSamples=new Array();
+    	var samplesFound=0;
+    	var searchHeader=position;
+    	while (searchHeader<4096){
+    		if(samples[(position * 2)%sampleLength]==samples[(searchHeader*2)%sampleLength]){
+    			nextSameLevelSamples.push(searchHeader);
+    		}
     	}
 
         if (--interval <= 0) {
-        	interval=nextSameLevelSample;
+        	interval=nextSameLevelSamples[1];
 	        //interval = grainSize;
 	        //position += grainStep;
         } else {
