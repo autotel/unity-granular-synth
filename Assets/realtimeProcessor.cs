@@ -111,12 +111,12 @@ public class realtimeProcessor : MonoBehaviour {
         //the lower score, the more similar
         float mostSimilarStartingPointScore = 99999999;
         //now analyze each zero crossing with our starting point, to find the most similar according to mean difference
-        float thisDifference = 0;
+        
         //for each zero cross in the list. zeroCrossingList[b] will be an individual sample position. 
-        for (int b = 0; b < zeroCrossingList.Length; b++)
-        {
+        for (int b = 0; b < zeroCrossingList.Length; b++){
+            float thisDifference = 0;
             //analze now sample by sample
-            for(int c=0;c < meanDifferenceAnalysisDifference; c++){
+            for (int c=0;c < meanDifferenceAnalysisDifference; c++){
                 int comparisonHeadA = currentLoopStart + c;
                 int comparisonHeadB = zeroCrossingList[b] + c;
                 //just make sure we are not out of range
