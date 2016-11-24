@@ -167,9 +167,18 @@ public class realtimeProcessor : MonoBehaviour {
             if (sampleposition > originalSamples.Length){
                 sampleposition = originalSamples.Length;
             }
-            int otherHalf = sampleposition + (currentLoopLength / 2);
-            data[a] = (originalSamples[sampleposition]*panLfo)+ (originalSamples[otherHalf] * (1-panLfo));
-			data [a+1] = (originalSamples[sampleposition+1] * panLfo)+ (originalSamples[otherHalf+1] * (1-panLfo));
+            int otherHalf = 0;
+            //get the other half to blend with
+            /* if (relativePosition <= (currentLoopLength / 2))
+             {
+                 otherHalf = sampleposition - (currentLoopLength / 2);
+             }
+             else {
+                 otherHalf = sampleposition + (currentLoopLength / 2);
+             }
+             */
+            data[a] = (originalSamples[sampleposition] * panLfo);//+ (originalSamples[otherHalf] * (1-panLfo));
+            data[a + 1] = (originalSamples[sampleposition + 1] * panLfo);//+ (originalSamples[otherHalf+1] * (1-panLfo));
             playHeadPosition++;
             
         }
