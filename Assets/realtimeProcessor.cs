@@ -28,17 +28,23 @@ public class realtimeProcessor : MonoBehaviour {
 	}
 
     void OnGUI(){
-        loopStartSliderValue = GUI.HorizontalSlider(new Rect(25, 25, 500, 30), loopStartSliderValue, 0.0f, 1.0f);
+        int margin = 25;
+        int inMarginWidth = Screen.width - 2*margin;
+        int cline = 0;
+        loopStartSliderValue = GUI.HorizontalSlider(new Rect(margin, cline, inMarginWidth, margin), loopStartSliderValue, 0.0f, 1.0f);
+        cline += margin;
 		//loopEndSliderValue = GUI.HorizontalSlider(new Rect(25, 50, 500, 30),Mathf.Max(loopStartSliderValue,loopEndSliderValue), 0.0f, 1.0f);
-		/*playHeaderSliderValue =*/ GUI.HorizontalSlider(new Rect(25, 75, 500, 30),((playHeadPosition*2.00f) / originalSamples.Length ), 0.0f, 1.0f);
-        loopLengthSliderValue = GUI.HorizontalSlider(new Rect(25, 100, 500, 30), loopLengthSliderValue, 0.0f, 1.0f);
+		/*playHeaderSliderValue =*/ GUI.HorizontalSlider(new Rect(margin, cline, inMarginWidth, margin),((playHeadPosition*2.00f) / originalSamples.Length ), 0.0f, 1.0f);
+        cline += margin;
+        loopLengthSliderValue = GUI.HorizontalSlider(new Rect(margin, cline, inMarginWidth, margin), loopLengthSliderValue, 0.0f, 1.0f);
+        cline += margin;
         setGrainLength(Mathf.FloorToInt(loopLengthSliderValue * originalSamples.Length / 2));
 
         //currentLoopStart = Mathf.FloorToInt (loopStartSliderValue * originalSamples.Length / 2);
         //currentLoopEnd = Mathf.FloorToInt (loopEndSliderValue * originalSamples.Length / 2);
         setGrainPosition(Mathf.FloorToInt(loopStartSliderValue * originalSamples.Length / 2));
 
-        GUI.TextArea (new Rect (25, 125, 500, 100), "star:"+currentLoopStart+"\nend:"+currentLoopEnd+"\npos:"+playHeadPosition+"\nLen:"+(originalSamples.Length/2));
+        GUI.TextArea (new Rect (margin, cline, inMarginWidth, 100), "star:"+currentLoopStart+"\nend:"+currentLoopEnd+"\npos:"+playHeadPosition+"\nLen:"+(originalSamples.Length/2));
     }
     int getNextPositiveZeroCrossing(int sample) {
         //search for next zero crossing from sample
