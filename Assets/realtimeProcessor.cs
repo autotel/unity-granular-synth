@@ -123,11 +123,9 @@ public class realtimeProcessor : MonoBehaviour {
                 if (!((comparisonHeadA >= originalSamples.Length) || (comparisonHeadB >= originalSamples.Length))){
                     goneThrough++;
                     //the first points affect the most, while the last points don't affect so much. I don't know what decay curve to use 
-                    float wheight = ((c * (1f / c)) / meanDifferenceAnalysisDifference);
+                    float wheight = ((c*0.1f) / meanDifferenceAnalysisDifference);
                     thisDifference += Mathf.Abs(originalSamples[comparisonHeadA]- originalSamples[comparisonHeadB])*wheight;
-                }
-                else
-                {
+                }else{
                     c = meanDifferenceAnalysisDifference + 1;
                 }
                 //if we already are scoring worse than the best, skip this evaluation
