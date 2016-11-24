@@ -40,7 +40,7 @@ public class realtimeProcessor : MonoBehaviour {
 
         GUI.TextArea (new Rect (25, 125, 500, 100), "star:"+currentLoopStart+"\nend:"+currentLoopEnd+"\npos:"+playHeadPosition+"\nLen:"+(originalSamples.Length/2));
     }
-    int getNextZeroCrossing(int sample) {
+    int getNextPositiveZeroCrossing(int sample) {
         //search for next zero crossing from sample
         int zeroCrossingFound = -1;
         int searchPoint = sample;
@@ -48,7 +48,7 @@ public class realtimeProcessor : MonoBehaviour {
         {
             //we need to waste one index to make zero crossing search easier, thus count before
             searchPoint++;
-            if (originalSamples[searchPoint] == 0)
+            if (originalSamples[searchPoint - 1] < 0 && originalSamples[searchPoint] == 0)
             {
                 //condition 0 that indicats zero crossing: the sample is zero
                 zeroCrossingFound = searchPoint;
@@ -64,11 +64,10 @@ public class realtimeProcessor : MonoBehaviour {
         return searchPoint;
     }
     void setGrainPosition(int sample) {
-        currentLoopStart = getNextZeroCrossing(sample);
+        currentLoopStart = getNextPositiveZeroCrossing(sample);
     }
     void setGrainLength(int slen) {
-
-        currentLoopEnd = getNextZeroCrossing(currentLoopStart + slen);
+        currentLoopEnd = getNextPositiveZeroCrossing(currentLoopStart + slen);
     }
 
     void OnAudioFilterRead (float[] data, int channels) {
