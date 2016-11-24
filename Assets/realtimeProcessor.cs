@@ -7,7 +7,7 @@ public class realtimeProcessor : MonoBehaviour {
 	public float frequency = 440;
     public int pointsToAnalyze = 100;
     public int meanDifferenceAnalysisDifference = 1024;
-
+    public float dafaultsGLength = 0.2f;
     float currentLoopScore = 0;
     int currentSelectedLoopLength = 0;
     int goneThrough = 0;
@@ -15,22 +15,25 @@ public class realtimeProcessor : MonoBehaviour {
 
     int currentLoopStart;
 	int currentLoopEnd;
+    int currentLoopLength;
 
-	int playHeadPosition;
+    int playHeadPosition;
 
     private float loopStartSliderValue = 0.0f;
 	private float loopEndSliderValue = 0.3f;
     private float loopLengthSliderValue = 0f;
-	//private float playHeaderSliderValue=0.0f;
+    
+    //private float playHeaderSliderValue=0.0f;
 
     float[] originalSamples;
 	void Start() {
 		thisAudioSource = GetComponent<AudioSource> ();
 		originalSamples = new float[thisAudioSource.clip.samples * thisAudioSource.clip.channels];
 		playHeadPosition = 0;
-		currentLoopStart = 0044;
-		currentLoopEnd = 2044;
-		thisAudioSource.clip.GetData (originalSamples, 0);
+        //currentLoopStart = 0;
+        loopLengthSliderValue = dafaultsGLength;
+        //currentLoopEnd = 4342;
+        thisAudioSource.clip.GetData (originalSamples, 0);
 
 	}
 
@@ -45,6 +48,8 @@ public class realtimeProcessor : MonoBehaviour {
         cline += margin;
         loopLengthSliderValue = GUI.HorizontalSlider(new Rect(margin, cline, inMarginWidth, margin), loopLengthSliderValue, 0.0f, 1.0f);
         cline += margin;
+        GUI.HorizontalSlider(new Rect(margin, cline, inMarginWidth, margin), panLfo, -1.0f, 1.0f);
+        cline += margin;
 
         setGrainPosition(Mathf.FloorToInt(loopStartSliderValue * originalSamples.Length / 2));
         setGrainLength(Mathf.FloorToInt(loopLengthSliderValue * originalSamples.Length / 2));
@@ -53,13 +58,14 @@ public class realtimeProcessor : MonoBehaviour {
         //currentLoopEnd = Mathf.FloorToInt (loopEndSliderValue * originalSamples.Length / 2);
         
 
-        GUI.TextArea (new Rect (margin, cline, inMarginWidth, 100), 
+        GUI.TextArea (new Rect (margin, cline, inMarginWidth, 200), 
             "star:"+currentLoopStart
             +"\nend:"+currentLoopEnd+"("+(currentLoopEnd- currentLoopStart) + ")"
             +"\npos:"+playHeadPosition
             +"\nLen:"+(originalSamples.Length/2)
             + "\n Length would be:" + currentSelectedLoopLength
             + "\n Similarity score is:" + currentLoopScore + " an "+goneThrough+"sel "+selectedZero
+            + "\n panlfo"+panLfo
             );
     }
     int getNextPositiveZeroCrossing(int sample) {
@@ -143,21 +149,29 @@ public class realtimeProcessor : MonoBehaviour {
         }
         currentLoopScore = mostSimilarStartingPointScore;
         currentLoopEnd = getNextPositiveZeroCrossing(currentLoopStart + slen);
+        currentLoopLength =  currentLoopEnd- currentLoopStart;
     }
-
+    //int nonLoopedPlayHeader = 0;
+    //the realtime filter uses it to avoid stuter from the remaining gap.
+    private float panLfo = 0;
     void OnAudioFilterRead (float[] data, int channels) {
 		for (int a = 0; a < data.Length; a+=2) {
-            if (playHeadPosition > currentLoopEnd){
+            //there should be two voices that are constantly crossfading, to smoothen out the small gaps
+            int relativePosition = playHeadPosition - currentLoopStart;
+            panLfo = (Mathf.Sin(2f*Mathf.PI * ((relativePosition-0.25f) / currentLoopLength))+1)/2;
+            if ((playHeadPosition > currentLoopEnd)||(playHeadPosition < currentLoopStart)){
                 playHeadPosition = currentLoopStart;
-            }
+            };
             int sampleposition = playHeadPosition * 2;
             //clamp
             if (sampleposition > originalSamples.Length){
                 sampleposition = originalSamples.Length;
             }
-            data[a] = originalSamples[sampleposition ];
-			data [a+1] = originalSamples[sampleposition +1];
+            int otherHalf = sampleposition + (currentLoopLength / 2);
+            data[a] = (originalSamples[sampleposition]*panLfo)+ (originalSamples[otherHalf] * (1-panLfo));
+			data [a+1] = (originalSamples[sampleposition+1] * panLfo)+ (originalSamples[otherHalf+1] * (1-panLfo));
             playHeadPosition++;
+            
         }
 
 	}
