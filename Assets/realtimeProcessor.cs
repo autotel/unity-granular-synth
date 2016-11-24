@@ -5,8 +5,15 @@ public class realtimeProcessor : MonoBehaviour {
 	AudioClip soundGrain;
 	public int samplerate = 44100;
 	public float frequency = 440;
+    public int pointsToAnalyze = 100;
+    public int meanDifferenceAnalysisDifference = 1024;
 
-	int currentLoopStart;
+    float currentLoopScore = 0;
+    int currentSelectedLoopLength = 0;
+    int goneThrough = 0;
+    int selectedZero = 0;
+
+    int currentLoopStart;
 	int currentLoopEnd;
 
 	int playHeadPosition;
@@ -38,22 +45,35 @@ public class realtimeProcessor : MonoBehaviour {
         cline += margin;
         loopLengthSliderValue = GUI.HorizontalSlider(new Rect(margin, cline, inMarginWidth, margin), loopLengthSliderValue, 0.0f, 1.0f);
         cline += margin;
+
+        setGrainPosition(Mathf.FloorToInt(loopStartSliderValue * originalSamples.Length / 2));
         setGrainLength(Mathf.FloorToInt(loopLengthSliderValue * originalSamples.Length / 2));
 
         //currentLoopStart = Mathf.FloorToInt (loopStartSliderValue * originalSamples.Length / 2);
         //currentLoopEnd = Mathf.FloorToInt (loopEndSliderValue * originalSamples.Length / 2);
-        setGrainPosition(Mathf.FloorToInt(loopStartSliderValue * originalSamples.Length / 2));
+        
 
-        GUI.TextArea (new Rect (margin, cline, inMarginWidth, 100), "star:"+currentLoopStart+"\nend:"+currentLoopEnd+"\npos:"+playHeadPosition+"\nLen:"+(originalSamples.Length/2));
+        GUI.TextArea (new Rect (margin, cline, inMarginWidth, 100), 
+            "star:"+currentLoopStart
+            +"\nend:"+currentLoopEnd+"("+(currentLoopEnd- currentLoopStart) + ")"
+            +"\npos:"+playHeadPosition
+            +"\nLen:"+(originalSamples.Length/2)
+            + "\n Length would be:" + currentSelectedLoopLength
+            + "\n Similarity score is:" + currentLoopScore + " an "+goneThrough+"sel "+selectedZero
+            );
     }
     int getNextPositiveZeroCrossing(int sample) {
         //search for next zero crossing from sample
         int zeroCrossingFound = -1;
         int searchPoint = sample;
+        
         while (zeroCrossingFound == -1)
         {
             //we need to waste one index to make zero crossing search easier, thus count before
             searchPoint++;
+            if (searchPoint >= originalSamples.Length) {
+                return -1;
+            }
             if (originalSamples[searchPoint - 1] < 0 && originalSamples[searchPoint] == 0)
             {
                 //condition 0 that indicats zero crossing: the sample is zero
@@ -73,6 +93,57 @@ public class realtimeProcessor : MonoBehaviour {
         currentLoopStart = getNextPositiveZeroCrossing(sample);
     }
     void setGrainLength(int slen) {
+        currentSelectedLoopLength = slen;
+        goneThrough = 0;
+
+        int[]zeroCrossingList = new int[pointsToAnalyze];
+        int ZeroCrossingSeekPosition = slen+currentLoopStart;
+        //list some zero crossings (the amount to list is user defined)
+        for (int a = 0; a < zeroCrossingList.Length; a++) {
+            zeroCrossingList[a]=getNextPositiveZeroCrossing(ZeroCrossingSeekPosition);
+            //if there was a zero crossing found, next repetition we search zero crossing from this point on.
+            if (zeroCrossingList[a] != -1) {
+                ZeroCrossingSeekPosition = zeroCrossingList[a];
+            };
+        }
+        //here we store the most similar starting point found so far.
+        int mostSimilarStartingPointInList = 0;
+        //the lower score, the more similar
+        float mostSimilarStartingPointScore = 99999999;
+        //now analyze each zero crossing with our starting point, to find the most similar according to mean difference
+        float thisDifference = 0;
+        //for each zero cross in the list. zeroCrossingList[b] will be an individual sample position. 
+        for (int b = 0; b < zeroCrossingList.Length; b++)
+        {
+            //analze now sample by sample
+            for(int c=0;c < meanDifferenceAnalysisDifference; c++){
+                int comparisonHeadA = currentLoopStart + c;
+                int comparisonHeadB = zeroCrossingList[b] + c;
+                //just make sure we are not out of range
+                if (!((comparisonHeadA >= originalSamples.Length) || (comparisonHeadB >= originalSamples.Length))){
+                    goneThrough++;
+                    //the first points affect the most, while the last points don't affect so much. I don't know what decay curve to use 
+                    float wheight = ((c * (1f / c)) / meanDifferenceAnalysisDifference);
+                    thisDifference += Mathf.Abs(originalSamples[comparisonHeadA]- originalSamples[comparisonHeadB])*wheight;
+                }
+                else
+                {
+                    c = meanDifferenceAnalysisDifference + 1;
+                }
+                //if we already are scoring worse than the best, skip this evaluation
+                if (thisDifference > mostSimilarStartingPointScore)
+                {
+                    c = meanDifferenceAnalysisDifference + 1;
+                }
+            }
+            if (thisDifference < mostSimilarStartingPointScore)
+            {
+                mostSimilarStartingPointScore = thisDifference;
+                mostSimilarStartingPointInList = zeroCrossingList[b];
+                selectedZero = b;
+            }
+        }
+        currentLoopScore = mostSimilarStartingPointScore;
         currentLoopEnd = getNextPositiveZeroCrossing(currentLoopStart + slen);
     }
 
