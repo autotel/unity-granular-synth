@@ -71,7 +71,9 @@ public class realtimeProcessor : MonoBehaviour {
             + "\n panlfo"+panLfo
             );
     }
-
+    public void setStartingPoint(float num) {
+        setGrainPosition(Mathf.FloorToInt(num * originalSamples.Length*8 / 3));
+    }
     int getNextPositiveZeroCrossing(int sample) {
         //search for next zero crossing from sample
         int zeroCrossingFound = -1;
