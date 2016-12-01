@@ -13,12 +13,14 @@ public class realtimeProcessor : MonoBehaviour {
     int goneThrough = 0;
     int selectedZero = 0;
 
+    
     int currentLoopStart;
 	int currentLoopEnd;
     int currentLoopLength;
 
     int playHeadPosition;
 
+    private bool initialized = false;
     private float loopStartSliderValue = 0.0f;
 	private float loopEndSliderValue = 0.3f;
     private float loopLengthSliderValue = 0f;
@@ -34,8 +36,9 @@ public class realtimeProcessor : MonoBehaviour {
         loopLengthSliderValue = dafaultsGLength;
         //currentLoopEnd = 4342;
         thisAudioSource.clip.GetData (originalSamples, 0);
+        initialized = true;
 
-	}
+    }
 
     void OnGUI(){
         int margin = 25;
@@ -56,7 +59,7 @@ public class realtimeProcessor : MonoBehaviour {
 
         //currentLoopStart = Mathf.FloorToInt (loopStartSliderValue * originalSamples.Length / 2);
         //currentLoopEnd = Mathf.FloorToInt (loopEndSliderValue * originalSamples.Length / 2);
-        
+
 
         GUI.TextArea (new Rect (margin, cline, inMarginWidth, 200), 
             "star:"+currentLoopStart
@@ -68,6 +71,7 @@ public class realtimeProcessor : MonoBehaviour {
             + "\n panlfo"+panLfo
             );
     }
+
     int getNextPositiveZeroCrossing(int sample) {
         //search for next zero crossing from sample
         int zeroCrossingFound = -1;
@@ -80,15 +84,10 @@ public class realtimeProcessor : MonoBehaviour {
             if (searchPoint >= originalSamples.Length) {
                 return -1;
             }
-            if (originalSamples[searchPoint - 1] < 0 && originalSamples[searchPoint] == 0)
+            //if either this sample is zero or the two samples have different sign, it's a zero cross.
+            //good idea sourced from https://www.dsprelated.com/showcode/179.php
+            if (originalSamples[searchPoint - 1] * originalSamples[searchPoint] < 0)
             {
-                //condition 0 that indicats zero crossing: the sample is zero
-                zeroCrossingFound = searchPoint;
-                return zeroCrossingFound;
-            }
-            else if (originalSamples[searchPoint - 1] < 0 && originalSamples[searchPoint] > 0)
-            {
-                //condition 1 that indicats zero crossing: the sample crosses the zero
                 zeroCrossingFound = searchPoint;
                 return zeroCrossingFound;
             }
@@ -130,6 +129,7 @@ public class realtimeProcessor : MonoBehaviour {
                     goneThrough++;
                     //the first points affect the most, while the last points don't affect so much. I don't know what decay curve to use 
                     float wheight = ((c*0.1f) / meanDifferenceAnalysisDifference);
+                    wheight = wheight * wheight;
                     thisDifference += Mathf.Abs(originalSamples[comparisonHeadA]- originalSamples[comparisonHeadB])*wheight;
                 }else{
                     c = meanDifferenceAnalysisDifference + 1;
@@ -155,33 +155,38 @@ public class realtimeProcessor : MonoBehaviour {
     //the realtime filter uses it to avoid stuter from the remaining gap.
     private float panLfo = 0;
     void OnAudioFilterRead (float[] data, int channels) {
-		for (int a = 0; a < data.Length; a+=2) {
-            //there should be two voices that are constantly crossfading, to smoothen out the small gaps
-            int relativePosition = playHeadPosition - currentLoopStart;
-            panLfo = (Mathf.Sin(2f*Mathf.PI * ((relativePosition-0.25f) / currentLoopLength))+1)/2;
-            if ((playHeadPosition > currentLoopEnd)||(playHeadPosition < currentLoopStart)){
-                playHeadPosition = currentLoopStart;
-            };
-            int sampleposition = playHeadPosition * 2;
-            //clamp
-            if (sampleposition > originalSamples.Length){
-                sampleposition = originalSamples.Length;
-            }
-            int otherHalf = 0;
-            //get the other half to blend with
-            /* if (relativePosition <= (currentLoopLength / 2))
-             {
-                 otherHalf = sampleposition - (currentLoopLength / 2);
-             }
-             else {
-                 otherHalf = sampleposition + (currentLoopLength / 2);
-             }
-             */
-            data[a] = (originalSamples[sampleposition] * panLfo);//+ (originalSamples[otherHalf] * (1-panLfo));
-            data[a + 1] = (originalSamples[sampleposition + 1] * panLfo);//+ (originalSamples[otherHalf+1] * (1-panLfo));
-            playHeadPosition++;
-            
-        }
+        if (initialized)
+        {
+            for (int a = 0; a < data.Length; a += 2)
+            {
+                //there should be two voices that are constantly crossfading, to smoothen out the small gaps
+                int relativePosition = playHeadPosition - currentLoopStart;
+                panLfo = 1;// (Mathf.Sin(2f * Mathf.PI * ((relativePosition - 0.25f) / currentLoopLength)) + 1) / 2;
+                if ((playHeadPosition > currentLoopEnd) || (playHeadPosition < currentLoopStart))
+                {
+                    playHeadPosition = currentLoopStart;
+                };
+                int sampleposition = playHeadPosition * 2;
+                //clamp
+                if (sampleposition > originalSamples.Length)
+                {
+                    sampleposition = originalSamples.Length;
+                }
+                int otherHalf = 0;
+                //get the other half to blend with
+                /* if (relativePosition <= (currentLoopLength / 2))
+                 {
+                     otherHalf = sampleposition - (currentLoopLength / 2);
+                 }
+                 else {
+                     otherHalf = sampleposition + (currentLoopLength / 2);
+                 }
+                 */
+                data[a] = (originalSamples[sampleposition] * panLfo);//+ (originalSamples[otherHalf] * (1-panLfo));
+                data[a + 1] = (originalSamples[sampleposition + 1] * panLfo);//+ (originalSamples[otherHalf+1] * (1-panLfo));
+                playHeadPosition++;
 
+            }
+        }
 	}
 }
